@@ -1,0 +1,469 @@
+---
+title: 'Figures for comment on "Information arms race explains plant-herbivore chemical communication in ecological communities"'
+author:
+  - Ethan Bass$^1$*
+  - Andre Kessler$^1$
+output: html_document
+  
+---
+
+```{r setup,include=F}
+knitr::opts_chunk$set(warning=F, echo=F)
+required_packages = c('zeallot','xlsx','ggplot2')
+install.packages(required_packages[which(!(required_packages %in% installed.packages()))])
+library('zeallot')
+library('xlsx')
+library('ggplot2')
+
+#  load information functions from information_functions.Rmd
+source('information_functions.R')
+```
+
+
+To run these analyses, download supplementary files from Zu et al 2020:
+
+1) https://www.science.org/doi/suppl/10.1126/science.aba2965/suppl_file/aba2965-zu-sm-database-s1.xlsx
+
+2) https://zenodo.org/record/3743129
+
+- Place them into the "data" directory.
+
+- You can also run the code below (set eval=T) to download and unzip the zenodo files, since they are not behind a paywall.
+
+```{r, eval=F}
+# set eval = T to run
+
+download.file('https://zenodo.org/record/3743129/files/MITEcology/Science_Zu_et_al_2020-v1.0.zip?download=1', destfile = 'data/zu_data.zip')
+
+unzip('data/zu_data.zip',files=c('MITEcology-Science_Zu_et_al_2020-7aa72bb/AP_obs.csv', 'MITEcology-Science_Zu_et_al_2020-7aa72bb/PV_obs.csv'), exdir = 'data', unzip = getOption("unzip"), junkpaths = T)
+```
+
+
+```{r, echo=F,warnings=F,eval=T,include=F}
+# neutral model with spare AP matrix and no selection
+# initialize variables
+PV = list()
+AP = list()
+AV <- list()
+
+HPV <- numeric()
+HAP <- numeric()
+HAV <- numeric()
+
+###
+reps=1000
+i=1
+m=28
+n=20
+AP_prob <- c(rep(0,9),1)
+AP[[i]] = matrix(sample(AP_prob,m*n,replace = T),m,n)
+##########
+m2=20
+n2=31
+PV_prob <- c(0,rep(1,4))
+PV[[i]] = matrix(sample(PV_prob,m2*n2,replace = T),m2,n2)
+##########
+x<-rowSums(AP[[i]])
+AV[[i]] <- sweep(AP[[i]],2, ifelse(x==0,1,x),'/') %*% PV[[i]]
+
+HAV[i] <- entropy(AV[[i]])
+HAP[i] <- entropy(AP[[i]])
+HPV[i] <- entropy(PV[[i]])
+
+n=reps
+for (i in 2:n){
+  PV[[i]] <- PV[[i-1]]
+  AP[[i]] <- AP[[i-1]]
+  if((i %% 2) == 0){
+    #mutate an element of the PV matrix
+    PV[[i]] <- PV[[i-1]]
+    AP[[i]] <- AP[[i-1]]
+    r=sample(c(1:560),1)
+    v=sample(PV_prob,1)
+    PV[[i]][r] <- v
+    
+    x<-rowSums(AP[[i]])
+    AV[[i]] <- sweep(AP[[i]],2, ifelse(x==0,1,x),'/') %*% PV[[i]]
+  
+  } else{
+    #mutate an element of the AP matrix
+    r=sample(c(1:560),1)
+    v=sample(AP_prob,1)
+    AP[[i]][r] <- v
+    
+    x<-rowSums(AP[[i]])
+    AV[[i]] <- sweep(AP[[i]],2, ifelse(x==0,1,x),'/') %*% PV[[i]]
+  }
+  #calculate conditional entropies
+    HAV[i] <- entropy(AV[[i]])
+    HAP[i] <- entropy(AP[[i]])
+    HPV[i] <- entropy(PV[[i]])
+}
+
+#save neutral model
+S5 <- list(reps,PV,AP,AV,HPV,HAP,HAV)
+saveRDS(S5,'data/S5.RDS')
+```
+
+
+```{r,echo=F,eval=F,include=F}
+# initialize variables
+# set eval = T to run
+reps=10000
+PV = vector('list',reps)
+AP = vector('list',reps)
+AV <- vector('list',reps)
+##########
+HPV <- vector('numeric',reps)
+HAP <- vector('numeric',reps)
+HAV <- vector('numeric',reps)
+HVA <- vector('numeric',reps)
+##########  
+Fp.g <- vector('list',reps)
+delta.Fp.g <- vector('numeric',reps)
+Fp <- vector('list',reps)
+Fp.i <- vector('numeric',reps)
+delta.Fp <- vector('numeric',reps)
+
+Fa.g <- vector('list',reps)
+delta.Fa.g <- vector('numeric',reps)
+Fa <- vector('list',reps)
+Fa.i <- vector('numeric',reps)
+delta.Fa <- vector('numeric',reps)
+##########
+# initialize matrices
+i=1
+m=28
+n=20
+AP[[i]] = matrix(sample(c(0,1),m*n,replace = T),m,n)
+##########
+m2=20
+n2=31
+PV[[i]] = matrix(sample(c(0,1),m2*n2,replace = T),m2,n2)
+##########
+x<-rowSums(AP[[i]])
+AV[[i]] <- sweep(AP[[i]],2, ifelse(x==0,1,x),'/') %*% PV[[i]]
+##########
+# initialize entropies
+i=1
+HPV[i] <- entropy(PV[[i]])
+HAP[i] <- entropy(AP[[i]])
+HAV[i] <- entropy(AV[[i]])
+HVA[i] <- entropy(t(AV[[i]]))
+##########
+for (i in 2:reps){
+  PV[[i]] <- PV[[i-1]]
+  AP[[i]] <- AP[[i-1]]
+  
+  if((i %% 2) == 0){
+    # mutate PV matrix
+    ii=sample(c(1:m2),1)
+    j=sample(c(1:n2),1)
+    v=sample(c(0,1),1)
+    PV[[i]][ii,j] <- v
+    
+    x<-rowSums(AP[[i]])
+    AV[[i]] <- sweep(AP[[i]],2, ifelse(x==0,1,x),'/') %*% PV[[i]]
+    
+    HPV[i] <- entropy(PV[[i]])
+    HAP[i] <- entropy(AP[[i]])
+    HAV[i] <- entropy(AV[[i]])
+    HVA[i] <- entropy(t(AV[[i]]))
+    
+    # community plant 'fitness'
+    delta.Fp.g[i] <- HAV[[i]] - HAV[[i-1]]
+
+    # individual plant fitness
+    # (post-mutation)
+    A.p <- as.logical(AP[[i]][,ii]) #which herbivores are on this plant
+  if (sum(A.p)==0){
+    Fp[[i]]<-1
+  } else{
+    Fp[[i]] <- 1 - sum(sapply(1:28, function(x){
+    I <-specific_information(AV[[i]])
+    (A.p[x]/sum(A.p))*I[[x]]})) # weighted average of specific information
+    }
+  
+    # (pre-mutation)
+    A.p <- as.logical(AP[[i-1]][,ii]) #which herbivores are on this plant
+    if (sum(A.p)==0){
+      Fp[[i-1]]<-0
+    } else{
+      Fp[[i-1]] <- 1 - sum(sapply(1:28, function(x){
+      I <-specific_information(AV[[i-1]])
+      (A.p[x]/sum(A.p))*I[[x]]})) # weighted average of specific information
+      }
+    
+    # (post-mutation) - (pre-mutation)
+    delta.Fp[i] <- Fp[[i]] - Fp[[i-1]]
+
+    # reset PV matrix to previous round if 'fitness' does not increase
+    if (delta.Fp[[i]] < 0){
+      PV[[i]] <- PV[[i-1]]
+    }
+  } else {
+      # mutate AP interaction matrix
+      ii=sample(c(1:m),1)
+      j=sample(c(1:n),1)
+      v=sample(c(0,1),1)
+      AP[[i]][ii,j] <- v
+      
+      x<-rowSums(AP[[i]])
+      AV[[i]] <- sweep(AP[[i]],2, ifelse(x==0,1,x),'/') %*% PV[[i]]
+      
+      ##################
+      HPV[i] <- entropy(PV[[i]])
+      HAP[i] <- entropy(AP[[i]])
+      HAV[i] <- entropy(AV[[i]])
+      HVA[i] <- entropy(t(AV[[i]]))
+      
+      #community herbivore 'fitness'
+      delta.Fa.g[i] <- HVA[[i-1]] - HVA[[i]]
+  
+      #individual herbivore 'fitness'
+      # (post-mutation)
+      Fa[[i]] <- specific_information(AV[[i]])
+      Fa.i[i] <- Fa[[i]][[ii]]
+      # (pre-mutation)
+      Fa[[i-1]] <- specific_information(AV[[i-1]])
+      
+      # (post-mutation) - (pre-mutation)
+      delta.Fa[i] <- Fa[[i]][ii] - Fa[[i-1]][ii]
+      
+      ##########
+      
+      # reset AP matrix to previous round if 'fitness' does not increase
+      if (delta.Fa[[i]] < 0){
+        AP[[i]] <- AP[[i-1]]
+      }
+    }
+  }
+```
+
+```{r,eval=F,include=F}
+#save simulation
+# set eval = T to run
+S2.8 <- list(reps,Fp.g,delta.Fp.g,Fp,delta.Fp,Fa.g,delta.Fa.g,Fa,delta.Fa,
+           PV,AP,AV,HPV,HAP,HAV,HVA,Fp.i,Fa.i)
+saveRDS(S2.8,'data/S2.8.RDS')
+```
+***
+\newpage
+
+# Figure 1
+```{r,  dpi=300, out.width="60%", out.height="60%", fig.cap="**Fig. 1.** Simulation of neutrally evolving plant-herbivore community, where the probability of a link in the PV and AP matrices is parameterized using frequencies estimated from the field data. We estimate that plant-volatile links occur with a probability of 0.8 and plant-herbivore links occur with a probability of 0.1. Compare with figure 3A in Zu *et al*."}
+
+c(reps,PV,AP,AV,HPV,HAP,HAV) %<-% readRDS('data/S5.RDS')
+
+x <- seq(1,1000,20)
+df <- rbind(data.frame(x=x,value=HPV[x],Simulated='H(P|V)'), data.frame(x=x,value=HAP[x],Simulated='H(A|P)'),
+      data.frame(x=x,value=HAV[x],Simulated='H(A|V)'))
+
+# insert path to Zu supplement below
+# download from: (https://www.science.org/doi/suppl/10.1126/science.aba2965/suppl_file/aba2965-zu-sm-database-s1.xlsx)
+
+path = 'data/aba2965-Zu-SM-Database-S1.xlsx'
+AP_obs <- lapply(seq(5,20,2), function(i) read.xlsx(path, i))
+PV_obs <- lapply(seq(6,20,2), function(i) read.xlsx(path, i))
+
+HPV_obs <- sapply(PV_obs, function(PV) entropy(PV[,-1]))
+HAP_obs <- sapply(AP_obs,function(AP) entropy(AP[,-1]))
+
+AV_obs <- lapply(1:3, function(i){
+  rs<-rowSums(AP_obs[[i]][,-1])
+  sweep(data.matrix(AP_obs[[i]][,-1]), 2, ifelse(rs==0,1,rs),'/') %*% data.matrix(PV_obs[[i]])
+   })
+
+HAV_obs <- sapply(AV_obs,function(AV) entropy(AV))
+
+ggplot(df, aes(x=x, y=value, shape=Simulated, color='#ee8169')) +
+  geom_point(size=1) + scale_shape_manual(values=c(15,17,19)) +
+  geom_hline(aes(yintercept=mean(HPV_obs), linetype = "H(P|V)")) + 
+  geom_hline(aes(yintercept=mean(HAP_obs), linetype = "H(A|P)")) + 
+  geom_hline(aes(yintercept=mean(HAV_obs), linetype = "H(A|V)")) +
+
+  scale_linetype_manual(name = "Observed",values=c("dashed","solid", "dotted")) +
+  ylim(0,1) + theme_classic() + xlab('Time') + ylab('Uncertainty') +
+  guides(color=F, shape=guide_legend(override.aes = list(color='#ee8169')))
+```
+
+
+# Figure 2
+
+```{r,fig_label}
+#https://logfc.wordpress.com/2017/03/15/adding-figure-labels-a-b-c-in-the-top-left-corner-of-the-plotting-region/
+fig_label <- function(text, region="figure", pos="topleft", cex=NULL, ...) {
+  
+  region <- match.arg(region, c("figure", "plot", "device"))
+  pos <- match.arg(pos, c("topleft", "top", "topright", 
+                          "left", "center", "right", 
+                          "bottomleft", "bottom", "bottomright"))
+  
+  if(region %in% c("figure", "device")) {
+    ds <- dev.size("in")
+    # xy coordinates of device corners in user coordinates
+    x <- grconvertX(c(0, ds[1]), from="in", to="user")
+    y <- grconvertY(c(0, ds[2]), from="in", to="user")
+    
+    # fragment of the device we use to plot
+    if(region == "figure") {
+      # account for the fragment of the device that 
+      # the figure is using
+      fig <- par("fig")
+      dx <- (x[2] - x[1])
+      dy <- (y[2] - y[1])
+      x <- x[1] + dx * fig[1:2]
+      y <- y[1] + dy * fig[3:4]
+    } 
+  }
+  
+  # much simpler if in plotting region
+  if(region == "plot") {
+    u <- par("usr")
+    x <- u[1:2]
+    y <- u[3:4]
+  }
+  
+  sw <- strwidth(text, cex=cex) * 60/100
+  sh <- strheight(text, cex=cex) * 60/100
+  
+  x1 <- switch(pos,
+               topleft     =x[1] + sw, 
+               left        =x[1] + sw,
+               bottomleft  =x[1] + sw,
+               top         =(x[1] + x[2])/2,
+               center      =(x[1] + x[2])/2,
+               bottom      =(x[1] + x[2])/2,
+               topright    =x[2] - sw,
+               right       =x[2] - sw,
+               bottomright =x[2] - sw)
+  
+  y1 <- switch(pos,
+               topleft     =y[2] - sh,
+               top         =y[2] - sh,
+               topright    =y[2] - sh,
+               left        =(y[1] + y[2])/2,
+               center      =(y[1] + y[2])/2,
+               right       =(y[1] + y[2])/2,
+               bottomleft  =y[1] + sh,
+               bottom      =y[1] + sh,
+               bottomright =y[1] + sh)
+  
+  old.par <- par(xpd=NA)
+  on.exit(par(old.par))
+  
+  text(x1, y1, text, cex=cex, ...)
+  return(invisible(c(x,y)))
+}
+```
+
+```{r, dpi=300, fig.cap="**Fig. 2.** (A) Relationship between the fitness of the mutated pelant species, calculated as $1 - I(A_p,V)$  and the community conditional entropy H(A|V), where $I(A_p,V)$ is calculated as the weighted average of the specific information $I(A=a,V)$ (equation 3) for the set of herbivores that interact with plant p. $p < 0.001, R^2 =  0.021$. (B) Relationship between the 'fitness' of the mutated herbivore species, calculated as $I(A_j,V)$, and the community conditional entropy H(V|A), where $I(A=a_j,V)$ is the specific information of the mutated herbivore species with respect to VOCs. $p < 0.001, R^2 =  0.46$. (C) Relationship between the specific information $I(P_i|V)$ and the number of herbivores associated with each plant species. $p = 0.86, R^2 = 0.0018$."}
+
+c(reps,Fp.g,delta.Fp.g,Fp,delta.Fp,Fa.g,delta.Fa.g,Fa,delta.Fa,
+  PV,AP,AV,HPV,HAP,HAV,HVA,Fp.i,Fp.a) %<-% readRDS('data/S2.8.RDS')
+
+#########
+
+AP_2018 <- read.csv("data/AP_obs.csv", header = TRUE, as.is = TRUE, row.names = 1)
+PV_2018 <- read.csv("data/PV_obs.csv", header = TRUE, as.is = TRUE, row.names = 1)
+
+### A ###
+
+m <- rbind(c(1, 2), c(3, 3))
+layout(m)
+#par(mar = c(2,4.1,2,2))
+# bottom, left, top, right
+par(mar = c(4.1, 4.1, 1.8, 2.1))
+pos='topleft'
+
+### panel A ###
+
+plot(delta.Fp, delta.Fp.g,
+     xlab = expression(Delta *'I(A=A'[p]*',V)'),
+     ylab = expression(Delta *'H(A|V)'),
+     pch=16,cex=.7, yaxt='none',xaxt='none', cex.lab=0.9,
+     type='n', xlim=-c(-.015,.015))
+limits = par()$usr
+rect(0,0,limits[1],limits[4],col="gray92")
+rect(0,0,limits[2],limits[3],col="gray92")
+points(delta.Fp, delta.Fp.g, pch=20)
+
+axis(2, las=1, cex.axis=0.7)
+axis(1, las=2, cex.axis=0.7)
+abline(h=0,v=0,lty=2,col='gray')
+#abline(h=seq(-.015,.01,.005), v=seq(-.02,.15, .005), lty=3, col="gray",alpha=0.2)
+
+#mtext(text = "A", side = 1, line = 1, las = 1, font = 1)
+fig_label(" A",'figure',pos,font=2)
+
+#m<-lm(delta.Fp ~ delta.Fp.g)
+#summary(m)
+
+
+### panel B ###
+
+plot(delta.Fa,delta.Fa.g,
+     xlab = expression(Delta *'I(V, A'[j]*')'),
+     ylab = expression(Delta *'H(V|A)'),
+     pch=16,cex=.7, xaxt = 'none',
+     yaxt='none', cex.axis=0.7, cex.lab=0.9,
+     type='n')
+limits = par()$usr
+rect(0,0,limits[1],limits[4],col="gray92")
+rect(0,0,limits[2],limits[3],col="gray92")
+axis(2, las=1, cex.axis=0.7)
+axis(1, las=2, cex.axis=0.7)
+points(delta.Fa, delta.Fa.g, pch=20)
+abline(h=0,v=0,lty='dashed',col='lightgray',size=.1)
+#abline(h=seq(-.005,.005,.001), v=seq(-.2,.2,.05), lty=3, col="gray",alpha=0.2)
+fig_label(" B",'figure',pos, font=2)
+
+# m<-lm(delta.Fa ~ delta.Fa.g)
+# summary(m)
+
+### panel C ###
+par(mar = c(5.1, 4.1, 2.1, 2.1))
+
+plot(specific_information(PV_2018), colSums(AP_2018),
+     xlab=expression('Specific information, I(P'[i]*'|V)'),
+     ylab='Herbivore number', pch=16,cex=.7, cex.lab=0.9)
+fig_label(" C",'figure',pos, font=2)
+
+# m<-lm(specific_information(PV_2018) ~ colSums(AP_2018))
+# summary(m)
+```
+
+```{r,eval=F}
+# additional analyses showing no relationship of H(P|V) and number of herbivores over multiple years
+
+#PV_obs <- c(PV_obs, PV_2018)
+#AP_obs <- c(AP_obs,AP_2018)
+
+x <- lapply(PV_obs, function(PV) data.frame(species=PV[,1], HPV=specific_information(PV[,-1])))
+
+x <- lapply(1:length(x), function(i){
+  x[[i]]$year<-i
+  x[[i]]
+ })
+
+y <- lapply(AP_obs, function(AP) data.frame(species=colnames(AP[,-1]), n=colSums(AP[,-1])))
+
+y <- lapply(1:length(y), function(i){
+  y[[i]]$year<-i
+  y[[i]]
+ })
+
+df <- merge(do.call(rbind,x), do.call(rbind,y), by=c('species','year'))
+
+m1 <- lm(n ~ HPV + as.factor(year), data=df)
+
+summary(aov(m))
+
+ss <- summary(aov(m))[[1]][,2]
+
+ss[1]/sum(ss)
+# very little variation is explained by specific conditional entropy
+
+ggplot(df, aes(x=HPV, y=n, color=year)) +
+  geom_point(size=1)
+```
