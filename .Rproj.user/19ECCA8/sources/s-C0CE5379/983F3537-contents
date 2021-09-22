@@ -1,0 +1,32 @@
+data <- structure(list(x = 0:38, y = c(0.991744340878828, 0.512512332368168, 
+                                       0.41102449265681, 0.356621905557202, 0.320851602373477, 0.29499198506227, 
+                                       0.275037747162642, 0.25938850981822, 0.245263623938863, 0.233655093612007, 
+                                       0.224041426946405, 0.214152907133301, 0.207475138903635, 0.203270738895484, 
+                                       0.194942528735632, 0.188107106969046, 0.180926819430008, 0.177028560207711, 
+                                       0.172595416846822, 0.166729221891201, 0.163502461048814, 0.159286528409165, 
+                                       0.156110097827889, 0.152655498715612, 0.148684858095915, 0.14733605355542, 
+                                       0.144691873223729, 0.143118852619617, 0.139542186417186, 0.137730138713745, 
+                                       0.134353615271572, 0.132197800438632, 0.128369567159113, 0.124971834736476, 
+                                       0.120027536018095, 0.117678812415655, 0.115720611113327, 0.112491329844252, 
+                                       0.109219168085624)), class = "data.frame", row.names = c(NA, 
+                                                                                                -39L), .Names = c("x", "y"))
+
+data <- data.frame(x=specific_information(PV_2018), y=colSums(AP_2018))
+
+# data = data.frame with x & y col names; fm = model fit; main = string shown above plot
+Plot <- function(data, fm, main) {
+  plot(y ~ x, data, pch = 20)
+  lines(fitted(fm) ~ x, data, col = "red")
+  legend("topright", bty = "n", cex = 0.7, legend = capture.output(fm))
+  title(main = paste(main, "- AIC:", round(AIC(fm), 2)))
+}  
+
+# 3 parameter model
+fo3 <- y ~ 1/(b + x^c) # omit .lin parameter; plinear will add it automatically
+fm3 <- nls(fo3, data = data, start = list(b = 1, c = 1), alg = "plinear")
+Plot(data, fm3, "3 parameters")
+
+# one parameter model
+fo1 <- y ~ 1 / (1 + x^c)
+fm1 <- nls(fo1, data, start = list(c = 1))
+Plot(data, fm1, "1 parameter")

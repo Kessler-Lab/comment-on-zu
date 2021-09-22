@@ -1,0 +1,5 @@
+sapply(PV_obs, function(PV) specific_information(PV[,-1]))
+
+plot(specific_information(PV_obs), colSums(AP_obs),
+     xlab=expression('Specific information, I(P'[i]*'|V)'),
+     ylab='Herbivore number', pch=16,cex=.7, cex.lab=0.9)

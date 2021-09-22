@@ -1,0 +1,29 @@
+y <- lapply(PV_obs, function(PV) data.frame(species=PV[,1], HPV=specific_information(PV[,-1])))
+y<-lapply(1:length(y), function(i){y[[i]]$year<-i
+y[[i]]})
+
+x <- lapply(AP_obs, function(AP) data.frame(species=colnames(AP[,-1]), n=colSums(AP[,-1])))
+x<-lapply(1:length(x), function(i){x[[i]]$year<-i
+x[[i]]})
+
+df <- merge(do.call(rbind,x), do.call(rbind,y), by=('species','y'))
+length(y[[2]])
+length(x[[2]])
+
+i=8
+matplot(do.call(cbind,x),do.call(cbind,y),pch=20, ylab='H(P|V)',
+        xlab='Number of herbivores')
+
+x
+y
+glm()
+plot(y[[i]], x[[i]],
+     xlab=expression('Specific information, I(P'[i]*'|V)'),
+     ylab='Herbivore number', pch=16,cex=.7, cex.lab=0.9)
+
+i=1
+summary(lm(y[[i]]~x[[i]]))
+
+plot(specific_information(PV_obs), colSums(AP_obs),
+     xlab=expression('Specific information, I(P'[i]*'|V)'),
+     ylab='Herbivore number', pch=16,cex=.7, cex.lab=0.9)

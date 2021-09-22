@@ -1,0 +1,4 @@
+"0","x <- lapply(PV_obs, function(PV) data.frame(species=PV[,1], HPV=specific_information(PV[,-1])))
+"
+"2","Error in PV[, 1] : incorrect number of dimensions
+"
