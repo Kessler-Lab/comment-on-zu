@@ -25,7 +25,7 @@ specific_information <- function(mat,norm=T){
     H.i = sum(sapply(1:ncol(mat),function(j){
       p.s <- sum(mat[,j])/n # prior probability of volatile Sj
       p.so <- mat[i,j]/sum(mat[i,]) # probability of signal Sj, given object o
-      p.so*log2(p.so/p.s) #
+      p.so*log2(p.so/p.s) # cf equation 3
     }),na.rm=T)
     if (norm==T){
       H.i <- H.i/log2(nrow(mat))}
